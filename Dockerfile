@@ -87,17 +87,16 @@ RUN ln -s /root/.composer/vendor/bin/phpcs /usr/bin/phpcs \
     && ln -s /root/.composer/vendor/bin/phpcpd /usr/bin/phpcpd
 
 # install docker
-
+RUN apt-get install --reinstall systemd -y
 RUN sudo apt update
-RUN  apt install apt-transport-https ca-certificates curl software-properties-common
-RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable"
-RUN apt update
-RUN apt-cache policy docker-ce
-RUN  apt install docker-ce
-RUN  systemctl status docker
-
+RUN  apt-get remove docker docker-engine docker.io
+RUN apt install docker.io
+RUN systemctl start docker
+RUN systemctl enable docker
+RUN  docker --version
 #install docker-composer
-RUN apt install docker-compose
+RUN curl -L "https://github.com/docker/compose/releases/download/1.25.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+RUN chmod +x /usr/local/bin/docker-compose
 # Clean up
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
