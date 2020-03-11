@@ -1,28 +1,95 @@
-FROM ubuntu:18.04
+FROM php:7.2-alpine
 
+# Install dev dependencies
+RUN apk add --no-cache --virtual .build-deps \
+    $PHPIZE_DEPS \
+    curl-dev \
+    imagemagick-dev \
+    libtool \
+    libxml2-dev \
+    postgresql-dev \
+    sqlite-dev
 
-# Add the "PHP 7" ppa
-RUN apt-get update
-RUN apt -y install software-properties-common
-RUN add-apt-repository ppa:ondrej/php
-RUN apt-get update
+# Install production dependencies
+RUN apk add --no-cache \
+    bash \
+    curl \
+    freetype-dev \
+    g++ \
+    gcc \
+    git \
+    imagemagick \
+    libc-dev \
+    libjpeg-turbo-dev \
+    libpng-dev \
+    libzip-dev \
+    make \
+    mysql-client \
+    nodejs \
+    nodejs-npm \
+    yarn \
+    openssh-client \
+    postgresql-libs \
+    rsync \
+    zlib-dev
 
-# Install PHP-CLI 7, some PHP extentions and some useful Tools with APT
-RUN  apt -y install php7.4
-RUN apt-get install -y php7.4-{bcmath,bz2,intl,gd,mbstring,mysql,zip}
+# Install PECL and PEAR extensions
+RUN pecl install \
+    imagick \
+    xdebug
 
-# install docker
-RUN apt-get install --reinstall systemd -y
-RUN sudo apt update
-RUN  apt-get remove docker docker-engine docker.io
-RUN apt install docker.io
-RUN systemctl start docker
-RUN systemctl enable docker
-RUN  docker --version
-#install docker-composer
-RUN curl -L "https://github.com/docker/compose/releases/download/1.25.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-RUN chmod +x /usr/local/bin/docker-compose
-# Clean up
-RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+# Enable PECL and PEAR extensions
+RUN docker-php-ext-enable \
+    imagick \
+    xdebug
 
-WORKDIR /var/www/laravel
+# Configure php extensions
+RUN docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ \
+    && docker-php-ext-configure zip --with-libzip
+
+# Install php extensions
+RUN docker-php-ext-install \
+    bcmath \
+    calendar \
+    curl \
+    exif \
+    gd \
+    iconv \
+    mbstring \
+    pdo \
+    pdo_mysql \
+    pdo_pgsql \
+    pdo_sqlite \
+    pcntl \
+    tokenizer \
+    xml \
+    zip
+
+# Install composer
+ENV COMPOSER_HOME /composer
+ENV PATH ./vendor/bin:/composer/vendor/bin:$PATH
+ENV COMPOSER_ALLOW_SUPERUSER 1
+RUN curl -s https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin/ --filename=composer
+
+# Install PHP_CodeSniffer
+RUN composer global require "squizlabs/php_codesniffer=*"
+
+# Install Laravel Envoy 
+RUN composer global require laravel/envoy
+
+# Install PHPCS
+RUN composer global require "squizlabs/php_codesniffer=*"
+
+# Cleanup dev dependencies
+RUN apk del -f .build-deps
+
+# Install openssh
+RUN apk add --no-cache openssh \
+  && sed -i s/#PermitRootLogin.*/PermitRootLogin\ yes/ /etc/ssh/sshd_config \
+  && echo "root:root" | chpasswd
+
+# Install sshpass
+RUN apk add sshpass
+
+# Setup working directory
+WORKDIR /var/www/html
