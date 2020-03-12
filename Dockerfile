@@ -1,6 +1,7 @@
-FROM php:7.4-fpm
+FROM php:7.4-alpine
 
 # Install dev dependencies
+RUN apk update
 RUN apk add --no-cache --virtual .build-deps \
     $PHPIZE_DEPS \
     curl-dev \
@@ -44,8 +45,7 @@ RUN docker-php-ext-enable \
     xdebug
 
 # Configure php extensions
-RUN docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ \
-    && docker-php-ext-configure zip --with-libzip
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg
 
 # Install php extensions
 RUN docker-php-ext-install \
@@ -55,7 +55,6 @@ RUN docker-php-ext-install \
     exif \
     gd \
     iconv \
-    mbstring \
     pdo \
     pdo_mysql \
     pdo_pgsql \
